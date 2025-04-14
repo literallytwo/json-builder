@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple JSON Builder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple JSON Builder</h1>
+
+        <div class="main-content">
+            <div class="builder-section">
+                <h2>Build JSON</h2>
+                <div id="json-builder">
+                    <div id="root-object" class="json-object">
+                        <div class="object-header">
+                            <span class="object-name">Root Object</span>
+                        </div>
+                        <div class="object-content">
+                            <!-- Dynamic content will be added here -->
+                        </div>
+                        <div class="object-actions">
+                            <button id="add-property" class="btn">Add Property</button>
+                            <button id="add-nested-object" class="btn">Add Nested Object</button>
+                            <button id="add-array" class="btn">Add Array</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <h2>JSON Preview</h2>
+                <div class="preview-actions">
+                    <button id="copy-json" class="btn">Copy to Clipboard</button>
+                    <button id="download-json" class="btn">Download JSON</button>
+                </div>
+                <pre id="json-preview"></pre>
+            </div>
+        </div>
+
+        <div class="import-section">
+            <h2>Import JSON</h2>
+            <textarea id="json-import" placeholder="Paste your JSON here..."></textarea>
+            <button id="parse-json" class="btn">Parse JSON</button>
+        </div>
+    </div>
+
+    <!-- Templates for dynamic elements -->
+    <template id="property-template">
+        <div class="property-item">
+            <input type="text" class="property-key" placeholder="Key">
+            <select class="property-type">
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="null">Null</option>
+            </select>
+            <input type="text" class="property-value" placeholder="Value">
+            <button class="remove-property btn-small">×</button>
+        </div>
+    </template>
+
+    <template id="array-template">
+        <div class="array-container">
+            <div class="array-header">
+                <input type="text" class="array-key" placeholder="Array Key">
+                <button class="remove-array btn-small">×</button>
+            </div>
+            <div class="array-items">
+                <!-- Array items will be added here -->
+            </div>
+            <div class="array-actions">
+                <button class="add-array-item btn-small">Add Item</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="array-item-template">
+        <div class="array-item">
+            <select class="item-type">
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="null">Null</option>
+                <option value="object">Object</option>
+            </select>
+            <input type="text" class="item-value" placeholder="Value">
+            <button class="remove-item btn-small">×</button>
+        </div>
+    </template>
+
+    <template id="array-object-template">
+        <div class="array-item array-object-item">
+            <div class="array-object-header">
+                <span class="array-object-label">Object</span>
+                <button class="toggle-array-object">▼</button>
+                <button class="remove-item btn-small">×</button>
+            </div>
+            <div class="array-object-content">
+                <!-- Properties will be added here -->
+            </div>
+            <div class="array-object-actions">
+                <button class="add-property btn-small">Add Property</button>
+                <button class="add-nested-object btn-small">Add Nested Object</button>
+                <button class="add-array btn-small">Add Array</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="nested-object-template">
+        <div class="nested-object">
+            <div class="object-header">
+                <input type="text" class="object-key" placeholder="Object Key">
+                <button class="toggle-object">▼</button>
+                <button class="remove-object btn-small">×</button>
+            </div>
+            <div class="object-content">
+                <!-- Properties will be added here -->
+            </div>
+            <div class="object-actions">
+                <button class="add-property btn-small">Add Property</button>
+                <button class="add-nested-object btn-small">Add Nested Object</button>
+                <button class="add-array btn-small">Add Array</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+</html>
