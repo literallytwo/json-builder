@@ -153,6 +153,38 @@ h2 {
     width: 120px;
 }
 
+/* Duplicate key warning styles */
+.duplicate-key-warning {
+    position: relative;
+    display: inline-block;
+}
+
+.warning-icon {
+    color: #f39c12;
+    margin-left: 5px;
+    cursor: help;
+    font-weight: bold;
+}
+
+.warning-tooltip {
+    display: none;
+    width: 200px;
+    background-color: #f39c12;
+    color: white;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+}
+
+.warning-icon:hover + .warning-tooltip {
+    display: block;
+}
+
 .property-type, .item-type {
     padding: 6px;
     border: 1px solid #ddd;

@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadJsonBtn = document.getElementById('download-json');
     const parseJsonBtn = document.getElementById('parse-json');
 
+    // We'll use a debounced function instead of MutationObserver to prevent excessive calls
+    let duplicateCheckTimeout = null;
+
     // Templates
     const propertyTemplate = document.getElementById('property-template');
     const arrayTemplate = document.getElementById('array-template');
@@ -28,8 +31,46 @@ document.addEventListener('DOMContentLoaded', function() {
     parseJsonBtn.addEventListener('click', parseImportedJson);
 
     // Update JSON preview whenever there's a change in the builder
-    jsonBuilder.addEventListener('input', updateJsonPreview);
-    jsonBuilder.addEventListener('change', updateJsonPreview);
+    jsonBuilder.addEventListener('input', function(e) {
+        updateJsonPreview();
+        // If the input is a key field, check for duplicates immediately
+        if (e.target.classList.contains('property-key') ||
+            e.target.classList.contains('object-key') ||
+            e.target.classList.contains('array-key') ||
+            e.target.classList.contains('item-key') ||
+            e.target.classList.contains('array-object-key') ||
+            e.target.classList.contains('array-array-key')) {
+            // Clear existing timeout to prevent multiple checks
+            if (duplicateCheckTimeout) {
+                clearTimeout(duplicateCheckTimeout);
+            }
+            // Run immediately for key fields
+            checkDuplicateKeys();
+        } else {
+            // Debounce for other fields
+            debouncedCheckDuplicateKeys();
+        }
+    });
+    jsonBuilder.addEventListener('change', function() {
+        updateJsonPreview();
+        checkDuplicateKeys(); // Run immediately on change events
+    });
+
+    // Add keyup listener to catch deletions and other key events
+    jsonBuilder.addEventListener('keyup', function(e) {
+        // If the input is a key field, check for duplicates immediately
+        if (e.target.classList.contains('property-key') ||
+            e.target.classList.contains('object-key') ||
+            e.target.classList.contains('array-key') ||
+            e.target.classList.contains('item-key') ||
+            e.target.classList.contains('array-object-key') ||
+            e.target.classList.contains('array-array-key')) {
+            // Check for backspace, delete, and other editing keys
+            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Cut') {
+                checkDuplicateKeys();
+            }
+        }
+    });
 
     // Also update when elements are added or removed (using event delegation)
     jsonBuilder.addEventListener('click', function(e) {
@@ -51,8 +92,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Initialize with empty JSON preview
+    // Initialize with empty JSON preview and check for duplicate keys
     updateJsonPreview();
+    // Initial check with a slight delay to ensure DOM is ready
+    setTimeout(checkDuplicateKeys, 100);
 
     // Functions
     function handleButtonClick(e) {
@@ -61,15 +104,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target.classList.contains('remove-property')) {
             target.closest('.property-item').remove();
             updateJsonPreview();
+            checkDuplicateKeys(); // Check for duplicates after removing
         } else if (target.classList.contains('remove-array')) {
             target.closest('.array-container').remove();
             updateJsonPreview();
+            checkDuplicateKeys(); // Check for duplicates after removing
         } else if (target.classList.contains('remove-item')) {
             target.closest('.array-item').remove();
             updateJsonPreview();
+            checkDuplicateKeys(); // Check for duplicates after removing
         } else if (target.classList.contains('remove-object')) {
             target.closest('.nested-object').remove();
             updateJsonPreview();
+            checkDuplicateKeys(); // Check for duplicates after removing
         } else if (target.classList.contains('add-property')) {
             // Handle both regular objects and array objects
             const parent = target.closest('.nested-object') || target.closest('.array-object-item');
@@ -175,6 +222,218 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateJsonPreview() {
         const json = buildJsonFromUI();
         jsonPreview.textContent = JSON.stringify(json, null, 2);
+    }
+
+    // Debounce function to prevent excessive calls
+    function debouncedCheckDuplicateKeys() {
+        if (duplicateCheckTimeout) {
+            clearTimeout(duplicateCheckTimeout);
+        }
+        duplicateCheckTimeout = setTimeout(checkDuplicateKeys, 150); // Reduced delay for better responsiveness
+    }
+
+    function checkDuplicateKeys() {
+        try {
+            // Always remove all existing warnings first to ensure clean state
+            document.querySelectorAll('.warning-icon, .warning-tooltip').forEach(element => {
+                if (element && element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            });
+
+            // Check for duplicate keys in the root object
+            const rootContent = rootObject.querySelector('.object-content');
+            if (rootContent) {
+                checkDuplicateKeysInContainer(rootContent);
+            }
+
+            // Check for duplicate keys in array objects - limit the scope to direct children
+            document.querySelectorAll('.array-object-content').forEach(container => {
+                if (container) {
+                    checkDuplicateKeysInContainer(container);
+                }
+            });
+
+            // Check for duplicate keys in nested objects - limit the scope to direct children
+            document.querySelectorAll('.nested-object > .object-content').forEach(container => {
+                if (container) {
+                    checkDuplicateKeysInContainer(container);
+                }
+            });
+
+            // Check for duplicate keys in array items - limit the scope to direct children
+            document.querySelectorAll('.array-items').forEach(container => {
+                if (container) {
+                    checkDuplicateKeysInArrayItems(container);
+                }
+            });
+
+            // Check for duplicate keys in nested array items - limit the scope to direct children
+            document.querySelectorAll('.array-array-content').forEach(container => {
+                if (container) {
+                    checkDuplicateKeysInArrayItems(container);
+                }
+            });
+        } catch (error) {
+            console.error('Error checking duplicate keys:', error);
+        }
+    }
+
+    function checkDuplicateKeysInContainer(container) {
+        if (!container) return;
+
+        const keys = {};
+
+        try {
+            // Check property keys
+            container.querySelectorAll(':scope > .property-item').forEach(item => {
+                const keyInput = item.querySelector('.property-key');
+                if (!keyInput) return;
+
+                const key = keyInput.value.trim();
+
+                if (key && keys[key]) {
+                    // This is a duplicate key
+                    addWarningToElement(keyInput);
+                    // Also add warning to the first occurrence
+                    addWarningToElement(keys[key]);
+                } else if (key) {
+                    keys[key] = keyInput;
+                }
+            });
+
+            // Check nested object keys
+            container.querySelectorAll(':scope > .nested-object').forEach(item => {
+                const keyInput = item.querySelector('.object-key');
+                if (!keyInput) return;
+
+                const key = keyInput.value.trim();
+
+                if (key && keys[key]) {
+                    // This is a duplicate key
+                    addWarningToElement(keyInput);
+                    // Also add warning to the first occurrence
+                    addWarningToElement(keys[key]);
+                } else if (key) {
+                    keys[key] = keyInput;
+                }
+            });
+
+            // Check array keys
+            container.querySelectorAll(':scope > .array-container').forEach(item => {
+                const keyInput = item.querySelector('.array-key');
+                if (!keyInput) return;
+
+                const key = keyInput.value.trim();
+
+                if (key && keys[key]) {
+                    // This is a duplicate key
+                    addWarningToElement(keyInput);
+                    // Also add warning to the first occurrence
+                    addWarningToElement(keys[key]);
+                } else if (key) {
+                    keys[key] = keyInput;
+                }
+            });
+        } catch (error) {
+            console.error('Error in checkDuplicateKeysInContainer:', error);
+        }
+    }
+
+    function checkDuplicateKeysInArrayItems(container) {
+        if (!container) return;
+
+        const keys = {};
+
+        try {
+            // Check array item keys
+            container.querySelectorAll(':scope > .array-item').forEach(item => {
+                if (!item) return;
+
+                const keyInput = item.querySelector('.item-key');
+                if (keyInput) {
+                    const key = keyInput.value.trim();
+
+                    if (key && keys[key]) {
+                        // This is a duplicate key
+                        addWarningToElement(keyInput);
+                        // Also add warning to the first occurrence
+                        addWarningToElement(keys[key]);
+                    } else if (key) {
+                        keys[key] = keyInput;
+                    }
+                }
+            });
+
+            // Check array object keys
+            container.querySelectorAll(':scope > .array-object-item').forEach(item => {
+                if (!item) return;
+
+                const keyInput = item.querySelector('.array-object-key');
+                if (keyInput) {
+                    const key = keyInput.value.trim();
+
+                    if (key && keys[key]) {
+                        // This is a duplicate key
+                        addWarningToElement(keyInput);
+                        // Also add warning to the first occurrence
+                        addWarningToElement(keys[key]);
+                    } else if (key) {
+                        keys[key] = keyInput;
+                    }
+                }
+            });
+
+            // Check array array keys
+            container.querySelectorAll(':scope > .array-array-item').forEach(item => {
+                if (!item) return;
+
+                const keyInput = item.querySelector('.array-array-key');
+                if (keyInput) {
+                    const key = keyInput.value.trim();
+
+                    if (key && keys[key]) {
+                        // This is a duplicate key
+                        addWarningToElement(keyInput);
+                        // Also add warning to the first occurrence
+                        addWarningToElement(keys[key]);
+                    } else if (key) {
+                        keys[key] = keyInput;
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error in checkDuplicateKeysInArrayItems:', error);
+        }
+    }
+
+    function addWarningToElement(element) {
+        try {
+            // Safety checks
+            if (!element || !element.parentNode) return;
+
+            // Check if warning already exists - redundant now but kept for safety
+            if (element.nextElementSibling && element.nextElementSibling.classList.contains('warning-icon')) {
+                return;
+            }
+
+            // Create warning icon with tooltip functionality
+            const warningIcon = document.createElement('span');
+            warningIcon.className = 'warning-icon';
+            warningIcon.textContent = '⚠';
+            warningIcon.title = 'This is a duplicate key! Only one of them will be shown in the result.'; // Fallback tooltip
+
+            // Create tooltip
+            const tooltip = document.createElement('span');
+            tooltip.className = 'warning-tooltip';
+            tooltip.textContent = 'This is a duplicate key! Only one of them will be shown in the result.';
+
+            // Insert after the element
+            element.parentNode.insertBefore(warningIcon, element.nextSibling);
+            element.parentNode.insertBefore(tooltip, warningIcon.nextSibling);
+        } catch (error) {
+            console.error('Error in addWarningToElement:', error);
+        }
     }
 
     function buildJsonFromUI() {
@@ -470,8 +729,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Build UI from JSON
             buildUIFromJson(json, objectContent);
 
-            // Update preview
+            // Update preview and check for duplicate keys
             updateJsonPreview();
+            // Check with a slight delay to ensure DOM is ready
+            setTimeout(checkDuplicateKeys, 100);
 
             alert('JSON successfully imported!');
         } catch (error) {
