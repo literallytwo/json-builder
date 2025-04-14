@@ -39,7 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.classList.contains('add-property') ||
             e.target.classList.contains('add-nested-object') ||
             e.target.classList.contains('add-array') ||
-            e.target.classList.contains('add-array-item') ||
+            e.target.classList.contains('add-array-value') ||
+            e.target.classList.contains('add-array-object') ||
+            e.target.classList.contains('add-array-array') ||
             e.target.classList.contains('toggle-object') ||
             e.target.classList.contains('toggle-array-object')) {
 
@@ -81,9 +83,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const parent = target.closest('.nested-object') || target.closest('.array-object-item');
             const contentContainer = parent.querySelector('.object-content') || parent.querySelector('.array-object-content');
             addArray(contentContainer);
-        } else if (target.classList.contains('add-array-item')) {
+        } else if (target.classList.contains('add-array-value')) {
             const arrayItems = target.closest('.array-container').querySelector('.array-items');
-            addArrayItem(arrayItems);
+            addArrayValue(arrayItems);
+        } else if (target.classList.contains('add-array-object')) {
+            const arrayItems = target.closest('.array-container').querySelector('.array-items');
+            addArrayObject(arrayItems);
+        } else if (target.classList.contains('add-array-array')) {
+            const arrayItems = target.closest('.array-container').querySelector('.array-items');
+            addArrayNestedArray(arrayItems);
         } else if (target.classList.contains('toggle-object')) {
             const nestedObject = target.closest('.nested-object');
             nestedObject.classList.toggle('collapsed');
@@ -111,20 +119,38 @@ document.addEventListener('DOMContentLoaded', function() {
         updateJsonPreview();
     }
 
-    function addArrayItem(container) {
-        // Check if we should add a regular item or an object item
-        const addObjectItem = confirm('Add an object item to the array?');
+    function addArrayValue(container) {
+        // Add a regular value item
+        const clone = document.importNode(arrayItemTemplate.content, true);
+        container.appendChild(clone);
+        updateJsonPreview();
+    }
 
-        if (addObjectItem) {
-            // Add an object item
-            const clone = document.importNode(arrayObjectTemplate.content, true);
-            container.appendChild(clone);
-        } else {
-            // Add a regular item
-            const clone = document.importNode(arrayItemTemplate.content, true);
-            container.appendChild(clone);
+    function addArrayObject(container) {
+        // Add an object item
+        const clone = document.importNode(arrayObjectTemplate.content, true);
+        container.appendChild(clone);
+        updateJsonPreview();
+    }
+
+    function addArrayNestedArray(container) {
+        // Create a nested array inside an array item
+        // For simplicity, we'll use a regular item with type 'object' and a JSON string
+        const clone = document.importNode(arrayItemTemplate.content, true);
+        const typeSelect = clone.querySelector('.item-type');
+
+        // Set type to object
+        for (let i = 0; i < typeSelect.options.length; i++) {
+            if (typeSelect.options[i].value === 'object') {
+                typeSelect.selectedIndex = i;
+                break;
+            }
         }
 
+        // Set an empty array as the value
+        clone.querySelector('.item-value').value = '[]';
+
+        container.appendChild(clone);
         updateJsonPreview();
     }
 
