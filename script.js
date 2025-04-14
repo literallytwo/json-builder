@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const arrayTemplate = document.getElementById('array-template');
     const arrayItemTemplate = document.getElementById('array-item-template');
     const arrayObjectTemplate = document.getElementById('array-object-template');
+    const arrayArrayTemplate = document.getElementById('array-array-template');
     const nestedObjectTemplate = document.getElementById('nested-object-template');
 
     // Event Listeners
@@ -43,7 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.classList.contains('add-array-object') ||
             e.target.classList.contains('add-array-array') ||
             e.target.classList.contains('toggle-object') ||
-            e.target.classList.contains('toggle-array-object')) {
+            e.target.classList.contains('toggle-array-object') ||
+            e.target.classList.contains('toggle-array-array')) {
 
             handleButtonClick(e);
         }
@@ -84,20 +86,50 @@ document.addEventListener('DOMContentLoaded', function() {
             const contentContainer = parent.querySelector('.object-content') || parent.querySelector('.array-object-content');
             addArray(contentContainer);
         } else if (target.classList.contains('add-array-value')) {
-            const arrayItems = target.closest('.array-container').querySelector('.array-items');
-            addArrayValue(arrayItems);
+            // Handle both regular arrays and nested arrays
+            let container;
+            // Check if the button is inside a nested array
+            if (target.closest('.array-array-actions')) {
+                container = target.closest('.array-array-item').querySelector('.array-array-content');
+            }
+            // Check if the button is inside a regular array
+            else if (target.closest('.array-container')) {
+                container = target.closest('.array-container').querySelector('.array-items');
+            }
+            if (container) addArrayValue(container);
         } else if (target.classList.contains('add-array-object')) {
-            const arrayItems = target.closest('.array-container').querySelector('.array-items');
-            addArrayObject(arrayItems);
+            // Handle both regular arrays and nested arrays
+            let container;
+            // Check if the button is inside a nested array
+            if (target.closest('.array-array-actions')) {
+                container = target.closest('.array-array-item').querySelector('.array-array-content');
+            }
+            // Check if the button is inside a regular array
+            else if (target.closest('.array-container')) {
+                container = target.closest('.array-container').querySelector('.array-items');
+            }
+            if (container) addArrayObject(container);
         } else if (target.classList.contains('add-array-array')) {
-            const arrayItems = target.closest('.array-container').querySelector('.array-items');
-            addArrayNestedArray(arrayItems);
+            // Handle both regular arrays and nested arrays
+            let container;
+            // Check if the button is inside a nested array
+            if (target.closest('.array-array-actions')) {
+                container = target.closest('.array-array-item').querySelector('.array-array-content');
+            }
+            // Check if the button is inside a regular array
+            else if (target.closest('.array-container')) {
+                container = target.closest('.array-container').querySelector('.array-items');
+            }
+            if (container) addArrayNestedArray(container);
         } else if (target.classList.contains('toggle-object')) {
             const nestedObject = target.closest('.nested-object');
             nestedObject.classList.toggle('collapsed');
         } else if (target.classList.contains('toggle-array-object')) {
             const arrayObject = target.closest('.array-object-item');
             arrayObject.classList.toggle('collapsed');
+        } else if (target.classList.contains('toggle-array-array')) {
+            const arrayArray = target.closest('.array-array-item');
+            arrayArray.classList.toggle('collapsed');
         }
     }
 
@@ -134,22 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function addArrayNestedArray(container) {
-        // Create a nested array inside an array item
-        // For simplicity, we'll use a regular item with type 'object' and a JSON string
-        const clone = document.importNode(arrayItemTemplate.content, true);
-        const typeSelect = clone.querySelector('.item-type');
-
-        // Set type to object
-        for (let i = 0; i < typeSelect.options.length; i++) {
-            if (typeSelect.options[i].value === 'object') {
-                typeSelect.selectedIndex = i;
-                break;
-            }
-        }
-
-        // Set an empty array as the value
-        clone.querySelector('.item-value').value = '[]';
-
+        // Create a proper nested array UI
+        const clone = document.importNode(arrayArrayTemplate.content, true);
         container.appendChild(clone);
         updateJsonPreview();
     }
@@ -160,21 +178,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function buildJsonFromUI() {
-        return buildObjectFromElement(rootObject);
+        const rootNameInput = rootObject.querySelector('.root-name');
+        const rootName = rootNameInput ? rootNameInput.value.trim() : '';
+
+        // Build the object from the root element
+        const rootObj = buildObjectFromElement(rootObject);
+
+        // If a root name is provided, wrap the object in a named object
+        if (rootName) {
+            const namedRoot = {};
+            namedRoot[rootName] = rootObj;
+            return namedRoot;
+        }
+
+        // Otherwise return the object as is
+        return rootObj;
     }
 
     function buildObjectFromElement(objectElement) {
         const result = {};
+        const resultArray = [];
+        let hasUnnamedProperties = false;
         const objectContent = objectElement.querySelector('.object-content');
 
         // Process properties
         const propertyItems = objectContent.querySelectorAll(':scope > .property-item');
         propertyItems.forEach(item => {
             const key = item.querySelector('.property-key').value.trim();
+            const type = item.querySelector('.property-type').value;
+            const valueInput = item.querySelector('.property-value').value;
+            const value = convertValueByType(valueInput, type);
+
             if (key) {
-                const type = item.querySelector('.property-type').value;
-                const valueInput = item.querySelector('.property-value').value;
-                result[key] = convertValueByType(valueInput, type);
+                // If key is provided, add as a named property
+                result[key] = value;
+            } else {
+                // If no key, add to the array of unnamed properties
+                resultArray.push(value);
+                hasUnnamedProperties = true;
             }
         });
 
@@ -196,6 +237,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // If we have unnamed properties, return an array with both named and unnamed properties
+        if (hasUnnamedProperties) {
+            // Add named properties to the array as objects
+            for (const key in result) {
+                const namedProperty = {};
+                namedProperty[key] = result[key];
+                resultArray.push(namedProperty);
+            }
+            return resultArray;
+        }
+
+        // Otherwise return the object as is
         return result;
     }
 
@@ -208,6 +261,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (item.classList.contains('array-object-item')) {
                 // Build object from the array object item
                 const objectContent = {};
+
+                // Check if the object has a name
+                const objectNameInput = item.querySelector('.array-object-key');
+                const objectName = objectNameInput ? objectNameInput.value.trim() : '';
 
                 // Process properties
                 const propertyItems = item.querySelectorAll('.array-object-content > .property-item');
@@ -238,34 +295,99 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                result.push(objectContent);
+                // If the object has a name, add it as a named property
+                if (objectName) {
+                    const namedObject = {};
+                    namedObject[objectName] = objectContent;
+                    result.push(namedObject);
+                } else {
+                    // Otherwise just push the object directly
+                    result.push(objectContent);
+                }
+            } else if (item.classList.contains('array-array-item')) {
+                // Build nested array
+                const nestedItems = item.querySelector('.array-array-content');
+                const arrayNameInput = item.querySelector('.array-array-key');
+                const arrayName = arrayNameInput ? arrayNameInput.value.trim() : '';
+
+                // Create the array
+                let nestedArray = [];
+
+                // If there are items in the nested array, process them
+                if (nestedItems) {
+                    // Process all array items directly
+                    const childItems = nestedItems.querySelectorAll('.array-item');
+                    if (childItems.length > 0) {
+                        // Create a temporary container with the same structure
+                        const tempContainer = document.createElement('div');
+                        tempContainer.className = 'array-container';
+
+                        const tempArrayItems = document.createElement('div');
+                        tempArrayItems.className = 'array-items';
+
+                        // Clone each child item to the temp container
+                        childItems.forEach(childItem => {
+                            tempArrayItems.appendChild(childItem.cloneNode(true));
+                        });
+
+                        tempContainer.appendChild(tempArrayItems);
+
+                        // Use the existing function to build the array
+                        nestedArray = buildArrayFromElement(tempContainer);
+                    }
+                }
+
+                // If the array has a name, add it as a named property to the parent object
+                if (arrayName) {
+                    // Create a named array object
+                    const namedArray = {};
+                    namedArray[arrayName] = nestedArray;
+                    result.push(namedArray);
+                } else {
+                    // Just push the array directly
+                    result.push(nestedArray);
+                }
             } else {
                 // Regular array item
                 const type = item.querySelector('.item-type').value;
                 const valueInput = item.querySelector('.item-value').value;
+                const keyInput = item.querySelector('.item-key');
+                const key = keyInput ? keyInput.value.trim() : '';
 
+                // Process the value based on its type
+                let value;
                 if (type === 'object') {
                     // Check if we have stored object data
                     const objectData = item.querySelector('.object-data');
                     if (objectData) {
                         try {
                             // Parse the stored object data
-                            result.push(JSON.parse(objectData.value));
+                            value = JSON.parse(objectData.value);
                         } catch (e) {
                             // Fallback to empty object if parsing fails
-                            result.push({});
+                            value = {};
                         }
                     } else {
                         // If no stored data, try to parse the value as JSON
                         try {
-                            result.push(JSON.parse(valueInput));
+                            value = JSON.parse(valueInput);
                         } catch (e) {
                             // Fallback to empty object
-                            result.push({});
+                            value = {};
                         }
                     }
                 } else {
-                    result.push(convertValueByType(valueInput, type));
+                    value = convertValueByType(valueInput, type);
+                }
+
+                // If a key is provided, create a key-value object
+                if (key) {
+                    const keyValueObj = {};
+                    keyValueObj[key] = value;
+                    result.push(keyValueObj);
+                } else {
+                    // Otherwise just push the value
+                    result.push(value);
                 }
             }
         });
@@ -358,18 +480,58 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function buildUIFromJson(json, container) {
-        for (const key in json) {
-            const value = json[key];
-            const valueType = typeof value;
+        // Check if json is an array (for handling unnamed properties)
+        if (Array.isArray(json)) {
+            json.forEach(item => {
+                const itemType = typeof item;
 
-            if (value === null) {
-                addPropertyWithValues(container, key, 'null', '');
-            } else if (Array.isArray(value)) {
-                addArrayWithValues(container, key, value);
-            } else if (valueType === 'object') {
-                addNestedObjectWithValues(container, key, value);
-            } else {
-                addPropertyWithValues(container, key, valueType, String(value));
+                if (item === null) {
+                    // Add unnamed null property
+                    addPropertyWithValues(container, '', 'null', '');
+                } else if (Array.isArray(item)) {
+                    // Add unnamed array
+                    addArrayWithValues(container, '', item);
+                } else if (itemType === 'object') {
+                    // Check if this is a named property (object with a single key)
+                    const keys = Object.keys(item);
+                    if (keys.length === 1) {
+                        const key = keys[0];
+                        const value = item[key];
+                        const valueType = typeof value;
+
+                        if (value === null) {
+                            addPropertyWithValues(container, key, 'null', '');
+                        } else if (Array.isArray(value)) {
+                            addArrayWithValues(container, key, value);
+                        } else if (valueType === 'object') {
+                            addNestedObjectWithValues(container, key, value);
+                        } else {
+                            addPropertyWithValues(container, key, valueType, String(value));
+                        }
+                    } else {
+                        // Add unnamed object
+                        addNestedObjectWithValues(container, '', item);
+                    }
+                } else {
+                    // Add unnamed property
+                    addPropertyWithValues(container, '', itemType, String(item));
+                }
+            });
+        } else {
+            // Handle regular object
+            for (const key in json) {
+                const value = json[key];
+                const valueType = typeof value;
+
+                if (value === null) {
+                    addPropertyWithValues(container, key, 'null', '');
+                } else if (Array.isArray(value)) {
+                    addArrayWithValues(container, key, value);
+                } else if (valueType === 'object') {
+                    addNestedObjectWithValues(container, key, value);
+                } else {
+                    addPropertyWithValues(container, key, valueType, String(value));
+                }
             }
         }
     }
@@ -413,17 +575,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 arrayItems.appendChild(itemClone);
             } else if (Array.isArray(item)) {
-                // Handle nested arrays (not fully implemented in this version)
-                const itemClone = document.importNode(arrayItemTemplate.content, true);
-                const typeSelect = itemClone.querySelector('.item-type');
-                for (let i = 0; i < typeSelect.options.length; i++) {
-                    if (typeSelect.options[i].value === 'object') {
-                        typeSelect.selectedIndex = i;
-                        break;
+                // Handle nested arrays with proper UI
+                const arrayClone = document.importNode(arrayArrayTemplate.content, true);
+                const arrayContent = arrayClone.querySelector('.array-array-content');
+
+                // Recursively build nested array items
+                item.forEach(nestedItem => {
+                    const nestedItemType = typeof nestedItem;
+
+                    if (nestedItem === null) {
+                        // Add null value
+                        const valueClone = document.importNode(arrayItemTemplate.content, true);
+                        const typeSelect = valueClone.querySelector('.item-type');
+                        for (let i = 0; i < typeSelect.options.length; i++) {
+                            if (typeSelect.options[i].value === 'null') {
+                                typeSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                        arrayContent.appendChild(valueClone);
+                    } else if (Array.isArray(nestedItem)) {
+                        // Handle nested nested arrays (recursively)
+                        const nestedArrayClone = document.importNode(arrayArrayTemplate.content, true);
+                        arrayContent.appendChild(nestedArrayClone);
+                    } else if (nestedItemType === 'object') {
+                        // Add nested object
+                        const objectClone = document.importNode(arrayObjectTemplate.content, true);
+                        const objectContent = objectClone.querySelector('.array-object-content');
+                        buildUIFromJson(nestedItem, objectContent);
+                        arrayContent.appendChild(objectClone);
+                    } else {
+                        // Add primitive value
+                        const valueClone = document.importNode(arrayItemTemplate.content, true);
+                        const typeSelect = valueClone.querySelector('.item-type');
+                        for (let i = 0; i < typeSelect.options.length; i++) {
+                            if (typeSelect.options[i].value === nestedItemType) {
+                                typeSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                        valueClone.querySelector('.item-value').value = String(nestedItem);
+                        arrayContent.appendChild(valueClone);
                     }
-                }
-                itemClone.querySelector('.item-value').value = JSON.stringify(item);
-                arrayItems.appendChild(itemClone);
+                });
+
+                arrayItems.appendChild(arrayClone);
             } else if (itemType === 'object') {
                 // Create a proper object UI for array items
                 const objectClone = document.importNode(arrayObjectTemplate.content, true);
@@ -434,20 +630,64 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 arrayItems.appendChild(objectClone);
             } else {
-                // Handle primitive values (string, number, boolean)
-                const itemClone = document.importNode(arrayItemTemplate.content, true);
-                const typeSelect = itemClone.querySelector('.item-type');
+                // Check if this is a key-value pair (object with a single key)
+                if (itemType === 'object' && Object.keys(item).length === 1) {
+                    const key = Object.keys(item)[0];
+                    const value = item[key];
+                    const valueType = typeof value;
 
-                // Set the correct type
-                for (let i = 0; i < typeSelect.options.length; i++) {
-                    if (typeSelect.options[i].value === itemType) {
-                        typeSelect.selectedIndex = i;
-                        break;
+                    // Handle primitive values with keys
+                    if (valueType !== 'object' || value === null) {
+                        const itemClone = document.importNode(arrayItemTemplate.content, true);
+
+                        // Set the key
+                        itemClone.querySelector('.item-key').value = key;
+
+                        // Set the type
+                        const typeSelect = itemClone.querySelector('.item-type');
+                        const typeValue = value === null ? 'null' : valueType;
+                        for (let i = 0; i < typeSelect.options.length; i++) {
+                            if (typeSelect.options[i].value === typeValue) {
+                                typeSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+
+                        // Set the value
+                        itemClone.querySelector('.item-value').value = value === null ? '' : String(value);
+                        arrayItems.appendChild(itemClone);
+                    } else {
+                        // Handle objects with keys
+                        const objectClone = document.importNode(arrayObjectTemplate.content, true);
+                        const objectContent = objectClone.querySelector('.array-object-content');
+
+                        // Set the key in the input field
+                        const objectKeyInput = objectClone.querySelector('.array-object-key');
+                        if (objectKeyInput) {
+                            objectKeyInput.value = key;
+                        }
+
+                        // Build the object content
+                        buildUIFromJson(value, objectContent);
+
+                        arrayItems.appendChild(objectClone);
                     }
-                }
+                } else {
+                    // Handle primitive values (string, number, boolean) without keys
+                    const itemClone = document.importNode(arrayItemTemplate.content, true);
+                    const typeSelect = itemClone.querySelector('.item-type');
 
-                itemClone.querySelector('.item-value').value = String(item);
-                arrayItems.appendChild(itemClone);
+                    // Set the correct type
+                    for (let i = 0; i < typeSelect.options.length; i++) {
+                        if (typeSelect.options[i].value === itemType) {
+                            typeSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+
+                    itemClone.querySelector('.item-value').value = String(item);
+                    arrayItems.appendChild(itemClone);
+                }
             }
         });
 

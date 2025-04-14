@@ -142,10 +142,15 @@ h2 {
     align-items: center;
 }
 
-.property-key, .property-value, .array-key, .object-key, .item-value {
+.property-key, .property-value, .array-key, .object-key, .item-value, .array-array-key, .item-key, .array-object-key, .root-name {
     padding: 6px;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.item-key {
+    background-color: #f0f8ff; /* Light blue background */
+    width: 120px;
 }
 
 .property-type, .item-type {
@@ -186,7 +191,7 @@ h2 {
 }
 
 /* Array Object Styles */
-.array-object-item {
+.array-object-item, .array-array-item {
     display: block;
     border: 1px solid #ddd;
     border-radius: 5px;
@@ -195,7 +200,7 @@ h2 {
     padding: 0;
 }
 
-.array-object-header {
+.array-object-header, .array-array-header {
     background-color: #e7f4ff;
     padding: 10px;
     border-bottom: 1px solid #ddd;
@@ -204,23 +209,31 @@ h2 {
     justify-content: space-between;
 }
 
-.array-object-label {
-    font-weight: bold;
+.array-object-key {
     flex-grow: 1;
+    margin-right: 10px;
+    background-color: #f0fff0; /* Light green background */
 }
 
-.array-object-content {
+.array-array-key {
+    flex-grow: 1;
+    color: #8e44ad; /* Purple to distinguish from objects */
+    margin-right: 10px;
+    background-color: #f9f0ff;
+}
+
+.array-object-content, .array-array-content {
     padding: 10px;
 }
 
-.array-object-actions {
+.array-object-actions, .array-array-actions {
     padding: 10px;
     background-color: #f5f5f5;
     display: flex;
     gap: 10px;
 }
 
-.toggle-array-object {
+.toggle-array-object, .toggle-array-array {
     background: none;
     border: none;
     cursor: pointer;
@@ -228,10 +241,30 @@ h2 {
 }
 
 .collapsed .array-object-content,
-.collapsed .array-object-actions {
+.collapsed .array-object-actions,
+.collapsed .array-array-content,
+.collapsed .array-array-actions {
     display: none;
 }
 
-.collapsed .toggle-array-object {
+.collapsed .toggle-array-object,
+.collapsed .toggle-array-array {
     transform: rotate(-90deg);
+}
+
+/* Style for nested arrays */
+.array-array-item {
+    border-color: #8e44ad;
+}
+
+.array-array-header {
+    background-color: #f5e6ff;
+}
+
+.root-name {
+    flex-grow: 1;
+    background-color: #fff0f0; /* Light red background */
+    font-weight: bold;
+    width: 100%;
+    margin-bottom: 10px;
 }

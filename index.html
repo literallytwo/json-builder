@@ -16,7 +16,7 @@
                 <div id="json-builder">
                     <div id="root-object" class="json-object">
                         <div class="object-header">
-                            <span class="object-name">Root Object</span>
+                            <input type="text" class="root-name" placeholder="Root Name (optional)">
                         </div>
                         <div class="object-content">
                             <!-- Dynamic content will be added here -->
@@ -50,7 +50,7 @@
     <!-- Templates for dynamic elements -->
     <template id="property-template">
         <div class="property-item">
-            <input type="text" class="property-key" placeholder="Key">
+            <input type="text" class="property-key" placeholder="Key (optional)">
             <select class="property-type">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -81,6 +81,7 @@
 
     <template id="array-item-template">
         <div class="array-item">
+            <input type="text" class="item-key" placeholder="Key (optional)">
             <select class="item-type">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -96,7 +97,7 @@
     <template id="array-object-template">
         <div class="array-item array-object-item">
             <div class="array-object-header">
-                <span class="array-object-label">Object</span>
+                <input type="text" class="array-object-key" placeholder="Object Name (optional)">
                 <button class="toggle-array-object">▼</button>
                 <button class="remove-item btn-small">×</button>
             </div>
@@ -107,6 +108,24 @@
                 <button class="add-property btn-small">Add Property</button>
                 <button class="add-nested-object btn-small">Add Nested Object</button>
                 <button class="add-array btn-small">Add Array</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="array-array-template">
+        <div class="array-item array-array-item">
+            <div class="array-array-header">
+                <input type="text" class="array-array-key" placeholder="Array Name (optional)">
+                <button class="toggle-array-array">▼</button>
+                <button class="remove-item btn-small">×</button>
+            </div>
+            <div class="array-array-content">
+                <!-- Nested array items will be added here -->
+            </div>
+            <div class="array-array-actions">
+                <button class="add-array-value btn-small">Add Value</button>
+                <button class="add-array-object btn-small">Add Object</button>
+                <button class="add-array-array btn-small">Add Array</button>
             </div>
         </div>
     </template>
