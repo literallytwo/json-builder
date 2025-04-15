@@ -142,7 +142,7 @@ h2 {
     align-items: center;
 }
 
-.property-key, .property-value, .array-key, .object-key, .item-value, .array-array-key, .item-key, .array-object-key, .root-name {
+.property-key, .property-value, .array-key, .object-key, .item-value, .array-array-key, .item-key, .array-object-key {
     padding: 6px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -293,10 +293,7 @@ h2 {
     background-color: #f5e6ff;
 }
 
-.root-name {
-    flex-grow: 1;
-    background-color: #fff0f0; /* Light red background */
+.object-name {
     font-weight: bold;
-    width: 100%;
-    margin-bottom: 10px;
+    color: #2c3e50;
 }

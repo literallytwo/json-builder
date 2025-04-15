@@ -437,21 +437,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function buildJsonFromUI() {
-        const rootNameInput = rootObject.querySelector('.root-name');
-        const rootName = rootNameInput ? rootNameInput.value.trim() : '';
-
         // Build the object from the root element
-        const rootObj = buildObjectFromElement(rootObject);
-
-        // If a root name is provided, wrap the object in a named object
-        if (rootName) {
-            const namedRoot = {};
-            namedRoot[rootName] = rootObj;
-            return namedRoot;
-        }
-
-        // Otherwise return the object as is
-        return rootObj;
+        return buildObjectFromElement(rootObject);
     }
 
     function buildObjectFromElement(objectElement) {
